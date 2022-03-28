@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 
 def sort_by_score(pred_boxes, pred_labels, pred_scores):
-    score_seq = [(-score).argsort() for index, score in enumerate(pred_scores)]
+    score_seq = [(-score).argsort() for score in pred_scores]
     pred_boxes = [sample_boxes[mask] for sample_boxes, mask in zip(pred_boxes, score_seq)]
     pred_labels = [sample_boxes[mask] for sample_boxes, mask in zip(pred_labels, score_seq)]
     pred_scores = [sample_boxes[mask] for sample_boxes, mask in zip(pred_scores, score_seq)]
@@ -30,9 +30,7 @@ def iou_2d(cubes_a, cubes_b):
     area_a = np.prod(cubes_a[..., 2:] - cubes_a[..., :2], axis=-1)
     area_b = np.prod(cubes_b[..., 2:] - cubes_b[..., :2], axis=-1)
 
-    # compute iou
-    iou = overlap / (area_a + area_b - overlap)
-    return iou
+    return overlap / (area_a + area_b - overlap)
 
 def _compute_ap(recall, precision):
     """ Compute the average precision, given the recall and precision curves.
@@ -56,9 +54,7 @@ def _compute_ap(recall, precision):
     # where X axis (recall) changes value
     i = np.where(mrec[1:] != mrec[:-1])[0]
 
-    # and sum (\Delta recall) * prec
-    ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
-    return ap
+    return np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
 
 def eval_ap_2d(gt_boxes, gt_labels, pred_boxes, pred_labels, pred_scores, iou_thread, num_cls):
     """
@@ -126,7 +122,7 @@ if __name__=="__main__":
     from model.fcos_copy import FCOSDetector
     #from demo import convertSyncBNtoBN
     from dataset.VOC_dataset import VOCDataset
-    
+
 
     eval_dataset = VOCDataset(root_dir='/home/shayeree/FCOS-PyTorch-37.2AP/data/VOCdevkit/VOC2007', resize_size=[800, 1333],
                                split='test', use_difficult=False, is_train=False, augment=None)
@@ -148,8 +144,7 @@ if __name__=="__main__":
     pred_boxes=[]
     pred_classes=[]
     pred_scores=[]
-    num=0
-    for img,boxes,classes in eval_loader:
+    for num, (img, boxes, classes) in enumerate(eval_loader, start=1):
         with torch.no_grad():
             out=model(img.cuda())
             pred_boxes.append(out[2][0].cpu().numpy())
@@ -157,14 +152,13 @@ if __name__=="__main__":
             pred_scores.append(out[0][0].cpu().numpy())
         gt_boxes.append(boxes[0].numpy())
         gt_classes.append(classes[0].numpy())
-        num+=1
         print(num,end='\r')
 
     pred_boxes,pred_classes,pred_scores=sort_by_score(pred_boxes,pred_classes,pred_scores)
     all_AP=eval_ap_2d(gt_boxes,gt_classes,pred_boxes,pred_classes,pred_scores,0.5,len(eval_dataset.CLASSES_NAME))
     print("all classes AP=====>\n")
     for key,value in all_AP.items():
-        print('ap for {} is {}'.format(eval_dataset.id2name[int(key)],value))
+        print(f'ap for {eval_dataset.id2name[int(key)]} is {value}')
     mAP=0.
     for class_id,class_mAP in all_AP.items():
         mAP+=float(class_mAP)

@@ -62,7 +62,7 @@ if __name__=="__main__":
         #fpn
         fpn_out_channels=256
         use_p5=True
-        
+
         #head
         class_num=80
         use_GN_head=True
@@ -99,7 +99,7 @@ if __name__=="__main__":
         img1=transforms.ToTensor()(img)
         img1= transforms.Normalize([0.485,0.456,0.406], [0.229,0.224,0.225],inplace=True)(img1)
         img1=img1
-        
+
 
         start_t=time.time()
         with torch.no_grad():
@@ -129,7 +129,7 @@ if __name__=="__main__":
         plt.axis('off')
         plt.gca().xaxis.set_major_locator(NullLocator())
         plt.gca().yaxis.set_major_locator(NullLocator())
-        plt.savefig('out_images/{}'.format(name), bbox_inches='tight', pad_inches=0.0)
+        plt.savefig(f'out_images/{name}', bbox_inches='tight', pad_inches=0.0)
         plt.close()
 
 

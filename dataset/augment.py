@@ -64,15 +64,14 @@ def _box_inter(box1, box2):
     tl = torch.max(box1[:,None,:2], box2[:,:2])  # [n,m,2]
     br = torch.min(box1[:,None,2:], box2[:,2:])  # [n,m,2]
     hw = (br-tl).clamp(min=0)  # [n,m,2]
-    inter = hw[:,:,0] * hw[:,:,1]  # [n,m]
-    return inter
+    return hw[:,:,0] * hw[:,:,1]
 
 
 
 def random_crop_resize(img, boxes, crop_scale_min=0.2, aspect_ratio=[3./4, 4./3], remain_min=0.7, attempt_max=10):
     success = False
     boxes = torch.from_numpy(boxes)
-    for attempt in range(attempt_max):
+    for _ in range(attempt_max):
         # choose crop size
         area = img.size[0] * img.size[1]
         target_area = random.uniform(crop_scale_min, 1.0) * area

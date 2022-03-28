@@ -41,17 +41,13 @@ class M2Det(nn.Module):
         # construct tums
         for i in range(self.num_levels):
             if i == 0:
-                setattr(self,
-                        'unet{}'.format(i+1),
-                        TUM(first_level=True, 
+                setattr(self, f'unet{i + 1}', TUM(first_level=True, 
                             input_planes=self.planes//2, 
                             is_smooth=self.smooth,
                             scales=self.num_scales,
-                            side_channel=512)) #side channel isn't fixed.
+                            side_channel=512))
             else:
-                setattr(self,
-                        'unet{}'.format(i+1),
-                        TUM(first_level=False, 
+                setattr(self, f'unet{i + 1}', TUM(first_level=False, 
                             input_planes=self.planes//2, 
                             is_smooth=self.smooth, 
                             scales=self.num_scales,
@@ -67,7 +63,7 @@ class M2Det(nn.Module):
             deep_in, deep_out = 1024,256
         self.reduce= BasicConv(shallow_in, shallow_out, kernel_size=3, stride=1, padding=1)
         self.up_reduce= BasicConv(deep_in, deep_out, kernel_size=1, stride=1)
-        
+
         # construct others
         if self.phase == 'test':
             self.softmax = nn.Softmax().cuda()
@@ -95,10 +91,10 @@ class M2Det(nn.Module):
         self.sfam_module = SFAM(self.planes, self.num_levels, self.num_scales, compress_ratio=16)
     
     def forward(self,x1,x2):
-        base_feats = [x1,x2]                   
+        base_feats = [x1,x2]
         self.reduce = self.reduce.cuda()
         self.up_reduce = self.up_reduce.cuda()
-       
+
         base_feature = torch.cat(
                 (self.reduce(base_feats[0]), F.interpolate(self.up_reduce(base_feats[1]),scale_factor=2,mode='nearest')),1
                 )
@@ -106,19 +102,17 @@ class M2Det(nn.Module):
         #print('crossed')
         #print("base feature shape:",base_feature.shape)
         # tum_outs is the multi-level multi-scale feature
-        tum_outs = [getattr(self, 'unet{}'.format(1))(self.leach[0](base_feature), 'none')]
-        #for i in tum_outs:
-            #print("tum_out shape:",i[0].shape)
+        tum_outs = [getattr(self, 'unet1')(self.leach[0](base_feature), 'none')]
+        tum_outs.extend(
+            getattr(self, f'unet{i + 1}')(
+                self.leach[i](base_feature), tum_outs[i - 1][-1]
+            )
+            for i in range(1, self.num_levels)
+        )
 
-        for i in range(1,self.num_levels,1):
-            tum_outs.append(
-                    getattr(self, 'unet{}'.format(i+1))(
-                        self.leach[i](base_feature), tum_outs[i-1][-1]
-                        )
-                    )
         # concat with same scales
         sources = [torch.cat([_fx[i-1] for _fx in tum_outs],1) for i in range(self.num_scales, 0, -1)]
-        
+
         # forward_sfam
         if self.sfam:
             sources = self.sfam_module(sources)
@@ -154,12 +148,9 @@ class M2Det(nn.Module):
 
     def load_weights(self, base_file):
         other, ext = os.path.splitext(base_file)
-        if ext == '.pkl' or '.pth':
-            print_info('Loading weights into state dict...')
-            self.load_state_dict(torch.load(base_file))
-            print_info('Finished!')
-        else:
-            print_info('Sorry only .pth and .pkl files supported.')
+        print_info('Loading weights into state dict...')
+        self.load_state_dict(torch.load(base_file))
+        print_info('Finished!')
 
     
 
@@ -167,11 +158,11 @@ def build_net(phase='train', size=320, config = None):
     return M2Det(phase, size, config)
 
 def print_info(info, _type=None):
-        if _type is not None:
-            if isinstance(info,str):
-                cprint(info, _type[0], attrs=[_type[1]])
-            elif isinstance(info,list):
-                for i in range(info):
-                    cprint(i, _type[0], attrs=[_type[1]])
-        else:
-            print(info)
+    if _type is None:
+        print(info)
+
+    elif isinstance(info,str):
+        cprint(info, _type[0], attrs=[_type[1]])
+    elif isinstance(info,list):
+        for i in range(info):
+            cprint(i, _type[0], attrs=[_type[1]])

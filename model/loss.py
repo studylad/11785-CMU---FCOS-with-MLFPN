@@ -22,8 +22,7 @@ def coords_fmap2orig(feature,stride):
     shift_y, shift_x = torch.meshgrid(shifts_y, shifts_x)
     shift_x = torch.reshape(shift_x, [-1])
     shift_y = torch.reshape(shift_y, [-1])
-    coords = torch.stack([shift_x, shift_y], -1) + stride // 2
-    return coords
+    return torch.stack([shift_x, shift_y], -1) + stride // 2
 
 class GenTargets(nn.Module):
     def __init__(self,strides,limit_range):
@@ -295,10 +294,7 @@ def focal_loss_from_logits(preds,targets,gamma=2.0,alpha=0.25):
 class LOSS(nn.Module):
     def __init__(self,config=None):
         super().__init__()
-        if config is None:
-            self.config=DefaultConfig
-        else:
-            self.config=config
+        self.config = DefaultConfig if config is None else config
     def forward(self,inputs):
         '''
         inputs list
@@ -314,10 +310,10 @@ class LOSS(nn.Module):
         reg_loss=compute_reg_loss(reg_preds,reg_targets,mask_pos).mean()
         if self.config.add_centerness:
             total_loss=cls_loss+cnt_loss+reg_loss
-            return cls_loss,cnt_loss,reg_loss,total_loss
         else:
             total_loss=cls_loss+reg_loss+cnt_loss*0.0
-            return cls_loss,cnt_loss,reg_loss,total_loss
+
+        return cls_loss,cnt_loss,reg_loss,total_loss
 
 
 
