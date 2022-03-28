@@ -23,11 +23,11 @@ class ClsCntRegHead(nn.Module):
         self.prior=prior
         self.class_num=class_num
         self.cnt_on_reg=cnt_on_reg
-        
+
         cls_branch=[]
         reg_branch=[]
 
-        for i in range(4):
+        for _ in range(4):
             cls_branch.append(nn.Conv2d(in_channel,in_channel,kernel_size=3,padding=1,bias=True))
             if GN:
                 cls_branch.append(nn.GroupNorm(32,in_channel))
@@ -44,9 +44,9 @@ class ClsCntRegHead(nn.Module):
         self.cls_logits=nn.Conv2d(in_channel,class_num,kernel_size=3,padding=1)
         self.cnt_logits=nn.Conv2d(in_channel,1,kernel_size=3,padding=1)
         self.reg_pred=nn.Conv2d(in_channel,4,kernel_size=3,padding=1)
-        
+
         self.apply(self.init_conv_RandomNormal)
-        
+
         nn.init.constant_(self.cls_logits.bias,-math.log((1 - prior) / prior))
         self.scale_exp = nn.ModuleList([ScaleExp(1.0) for _ in range(5)])
     

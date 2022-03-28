@@ -52,10 +52,7 @@ class DetectHead(nn.Module):
         self.nms_iou_threshold=nms_iou_threshold
         self.max_detection_boxes_num=max_detection_boxes_num
         self.strides=strides
-        if config is None:
-            self.config=DefaultConfig
-        else:
-            self.config=config
+        self.config = DefaultConfig if config is None else config
 
     def forward(self,inputs):
         cls_logits,coords=self._reshape_cat_out(inputs[0],self.strides)#[batch_size,sum(_h*_w),class_num]
@@ -154,14 +151,12 @@ class DetectHead(nn.Module):
         max_coordinate = boxes.max()
         offsets = idxs.to(boxes) * (max_coordinate + 1)
         boxes_for_nms = boxes + offsets[:, None]
-        keep = self.box_nms(boxes_for_nms, scores, iou_threshold)
-        return keep
+        return self.box_nms(boxes_for_nms, scores, iou_threshold)
 
     def _coords2boxes(self,coords,offsets):
         x1y1=coords[None,:,:]-offsets[...,:2]
         x2y2=coords[None,:,:]+offsets[...,2:]#[batch_size,sum(_h*_w),2]
-        boxes=torch.cat([x1y1,x2y2],dim=-1)#[batch_size,sum(_h*_w),4]
-        return boxes
+        return torch.cat([x1y1,x2y2],dim=-1)
 
 
     def _reshape_cat_out(self,inputs,strides):
@@ -210,8 +205,7 @@ class FCOSDetector(nn.Module):
             batch_imgs,batch_boxes,batch_classes=inputs
             out=self.fcos_body(batch_imgs)
             targets=self.target_layer([out,batch_boxes,batch_classes])
-            losses=self.loss_layer([out,targets])
-            return losses
+            return self.loss_layer([out,targets])
         elif self.mode=="inference":
             batch_imgs=inputs
             out=self.fcos_body(batch_imgs)

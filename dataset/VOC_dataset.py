@@ -137,10 +137,9 @@ class VOCDataset(torch.utils.data.Dataset):
 
         if boxes is None:
             return image_paded
-        else:
-            boxes[:, [0, 2]] = boxes[:, [0, 2]] * scale
-            boxes[:, [1, 3]] = boxes[:, [1, 3]] * scale
-            return image_paded, boxes
+        boxes[:, [0, 2]] = boxes[:, [0, 2]] * scale
+        boxes[:, [1, 3]] = boxes[:, [1, 3]] * scale
+        return image_paded, boxes
     def collate_fn(self,data):
         imgs_list,boxes_list,classes_list=zip(*data)
         assert len(imgs_list)==len(boxes_list)==len(classes_list)
@@ -175,7 +174,6 @@ class VOCDataset(torch.utils.data.Dataset):
 
 
 if __name__=="__main__":
-    pass
     eval_dataset = VOCDataset(root_dir='/Users/VOCdevkit/VOCdevkit/VOC0712', resize_size=[800, 1333],
                                split='test', use_difficult=False, is_train=False, augment=None)
     print(len(eval_dataset.CLASSES_NAME))

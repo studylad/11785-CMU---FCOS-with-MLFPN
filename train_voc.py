@@ -36,10 +36,7 @@ model = FCOSDetector(mode="training")#.cuda()
 print('==> Resuming from checkpoint..')
 model.load_state_dict(torch.load('./checkpoint/model_Pretrained_29.pth'),strict=False)
 model = torch.nn.DataParallel(model).cuda()
-#model.requires_grad_(False)
-count=0
-for param in model.parameters():
-    count+=1
+for count, param in enumerate(model.parameters(), start=1):
     if count<=635:#Only train SFAM and the predictor Heads
         param.requires_grad = False
 
@@ -48,7 +45,7 @@ EPOCHS = opt.epochs
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True,
                                            collate_fn=train_dataset.collate_fn,
                                            num_workers=opt.n_cpu, worker_init_fn=np.random.seed(0))
-print("total_images : {}".format(len(train_dataset)))
+print(f"total_images : {len(train_dataset)}")
 steps_per_epoch = len(train_dataset) // BATCH_SIZE
 TOTAL_STEPS = steps_per_epoch * EPOCHS
 WARMPUP_STEPS = 501
@@ -77,20 +74,20 @@ for epoch in range(start_epoch,EPOCHS):
            for param in optimizer.param_groups:
                param['lr'] = lr
         if GLOBAL_STEPS == 20001:
-           lr = LR_INIT * 0.1
-           for param in optimizer.param_groups:
+            lr = LR_INIT * 0.1
+            for param in optimizer.param_groups:
+                param['lr'] = lr
+        elif GLOBAL_STEPS == 27001:
+            lr = LR_INIT * 0.01
+            for param in optimizer.param_groups:
                param['lr'] = lr
-        if GLOBAL_STEPS == 27001:
-           lr = LR_INIT * 0.01
-           for param in optimizer.param_groups:
-              param['lr'] = lr
         start_time = time.time()
 
         optimizer.zero_grad()
         losses = model([batch_imgs, batch_boxes, batch_classes])
-        
+
         loss = losses[-1].cuda()
-        
+
         loss.mean().backward()
         writer.add_scalar("Loss/train", loss.mean().item(), epoch)
         optimizer.step()
@@ -103,5 +100,7 @@ for epoch in range(start_epoch,EPOCHS):
 
         GLOBAL_STEPS += 1
 
-    torch.save(model.state_dict(),"./checkpoint/model_Pretrained_{}.pth".format(epoch + 1))
+    torch.save(
+        model.state_dict(), f"./checkpoint/model_Pretrained_{epoch + 1}.pth"
+    )
    
